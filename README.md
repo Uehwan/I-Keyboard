@@ -1,5 +1,5 @@
 # I-Keyboard: Fully Imaginary Keyboard on Touch Devices Empowered by Deep Neural Decoder
-We propose a fully imaginary keyboard (I-Keyboard) with a deep neural decoder (DND). Below are a few features of I-Keyboard
+We propose a fully imaginary keyboard (I-Keyboard) with a deep neural decoder (DND). Below are a few features of I-Keyboard.
 - The eyes-free ten-finger typing scenario of I-Keyboard does not necessitate both a calibration step and a pre-defined region for typing (first explored in this study!).
 - The invisibility of I-Keyboard maximizes the usability of mobile devices.
 - DND empowered by a deep neural architecture allows users to start typing from any position on the touch screens at any angle.
@@ -10,10 +10,35 @@ We propose a fully imaginary keyboard (I-Keyboard) with a deep neural decoder (D
 
 These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
 
-### Requirements
+### Requirements for Data Collection
+* MS Visual Studio >= 2015
+
+### Requirements for DND
 
 * CUDA >= 9.0
 * Python 3.6+
+* Tensorflow >= 2.0
+
+## Data Collection
+### Data Format
+1. File Name: We have two types of file names.
+- D_A_S_I_T_P
+  - D: date (YYYYMMDD).
+  - A: age.
+  - S: sex (male or female).
+  - I: initial for discrimination.
+  - T: typing speed on physical keyboard.
+  - P: palm attached or detached while typing.
+  - e.g. 20190117_24_male_lhk_200_x
+- D_A_S_M_T
+  - M: major for discrimination.
+  - e.g. 20180831_26_male_enginerring_140
+2. Data Format
+- One or two line(s) of phrases.
+  - When an enter is involved, two lines appear.
+  - The two phrases are separated by the enter key.
+- The sequence of x touch positions.
+- The sequence of y touch positions.
 
 ## Data Visualization
 To visualize the user behavior and analyze the statistics of user behavior, run the below.
@@ -31,10 +56,11 @@ python3 user_analysis.py
 ```
 
 ## Notification
-- The paper is under review at the moment (IEEE Trans. Cybernetics)
+- The paper is under review at the moment (IEEE Trans. on Cybernetics)
 - We are planning to update the DND code in line with Tensorflow 2.0 and then release the code
-- We are currently working on the version 2.0 of I-Keyboard
+- We are currently working on the version 2.0 of I-Keyboard which is much versatile and cooler!
 - Any comments are welcome
+- Thank you for your attention
 
 ## Citations
 
