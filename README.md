@@ -14,16 +14,15 @@ These instructions will get you a copy of the project up and running on your loc
 
 * CUDA >= 9.0
 * Python 3.6+
-* [Pytorch 1.0.0 from a nightly release](https://pytorch.org/get-started/previous-versions/)
 
 ## Data Visualization
 To visualize the user behavior and analyze the statistics of user behavior, run the below.
-Running below will create two directories ('list' and 'figs') and save both the preprocessed results and the figures.
+Running below will create two directories ('list_data' and 'figs') and save both the preprocessed results and the figures.
 
 ```bash
 cd user_behavior_analysis
 
-# preprocess the raw_data and save the result in the 'list' directory
+# preprocess the raw_data and save the result in the 'list_data' directory
 python3 preprocessing.py
 
 # visualize each experiment participant's typing behavior
@@ -31,6 +30,11 @@ python3 preprocessing.py
 python3 user_analysis.py
 ```
 
+## Notification
+- The paper is under review at the moment (IEEE Trans. Cybernetics)
+- We are planning to update the DND code in line with Tensorflow 2.0 and then release the code
+- We are currently working on the version 2.0 of I-Keyboard
+- Any comments are welcome
 
 ## Citations
 
@@ -45,3 +49,6 @@ The following is the BibTeX.
   year={2019}
 }
 ```
+
+## Acknowledgement
+This work was supported by the National Research Foundation of Korea (NRF) grant funded by the Korea government (MSIT) (No. NRF-2017R1A2A1A17069837).
