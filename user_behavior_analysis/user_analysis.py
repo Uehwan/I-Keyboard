@@ -165,6 +165,8 @@ if __name__ == "__main__":
         # the abs method is used to make sure that all numbers are positive
         # because x and y axis of an axes maybe inverted.
         ax.set_aspect(abs((xright - xleft) / (ybottom - ytop)) * ratio)
+        ax.set_ylabel('offset (pixel)')
+        ax.set_xlabel('number of sentences')
         fig.savefig('figs/figure_' + name)
         plt.show()
         plt.close(fig)
