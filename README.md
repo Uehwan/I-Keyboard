@@ -63,10 +63,11 @@ conda activate ikeyboard
 conda install -c conda-forge tensorflow-gpu=1.14 editdistance
 ```
 
-Then, you need to prepare data record using the "data.py" script as follows
+Then, you need to prepare data records using the "data.py" script as follows
 ```bash
 python data.py
 ```
+Executing the above script will generate a set of .tfrecords and .pkl objects required for training and testing.
 
 Finally, you can train and test the propose DND model as follows
 ```bash
@@ -89,7 +90,7 @@ The following is the BibTeX.
 @article{kim2019keyboard,
   title={I-Keyboard: Fully Imaginary Keyboard on Touch Devices Empowered by Deep Neural Decoder},
   author={Kim, Ue-Hwan and Yoo, Sahng-Min and Kim, Jong-Hwan},
-  journal={arXiv preprint arXiv:1907.13285},
+  journal={IEEE Transactions on Cybernetics},
   year={2019}
 }
 ```
