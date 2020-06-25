@@ -106,3 +106,8 @@ venv.bak/
 # editor
 .idea
 .vscode
+
+# project specifics
+*.pkl
+*.tfrecords
+log/

@@ -17,7 +17,7 @@ These instructions will get you a copy of the project up and running on your loc
 
 * CUDA >= 9.0
 * Python 3.6+
-* Tensorflow >= 2.0
+* Tensorflow >= 1.14
 
 ## Data Collection
 ### Data Format
@@ -55,10 +55,28 @@ python3 preprocessing.py
 python3 user_analysis.py
 ```
 
+## Training and Testing
+For training, you need to set up a conda environment (recommended), or you can use pip instead
+```bash
+conda cread --name ikeyboard python=3.6
+conda activate ikeyboard
+conda install -c conda-forge tensorflow-gpu=1.14 editdistance
+```
+
+Then, you need to prepare data record using the "data.py" script as follows
+```bash
+python data.py
+```
+
+Finally, you can train and test the propose DND model as follows
+```bash
+python train.py --name experiment_name
+python test_experiment.py
+```
+For training options and test options, refer to "train_script.py" and "test_script.py".
+
 ## Notification
-- The paper is under review at the moment (IEEE Trans. on Cybernetics)
-- We are planning to update the DND code in line with Tensorflow 2.0 and then release the code
-- We are currently working on the version 2.0 of I-Keyboard which is much versatile and cooler!
+- The paper has been accepted! (IEEE Trans. on Cybernetics)
 - Any comments are welcome
 - Thank you for your attention
 

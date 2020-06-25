@@ -1,139 +1,127 @@
-import tensorflow as tf
-import numpy as np
+import editdistance
+import re
 
 
-def get_angles(pos, i, d_model):
-    angle_rates = 1 / np.power(10000, (2 * (i//2)) / np.float32(d_model))
-    return pos * angle_rates
+# defines global regex for tagged noises
+re_tagged_noises = re.compile(r"[\[<][A-Za-z ]*[\]>]")
+
+# defines global regex to remove these nsns
+non_silence_noises = ["noise", "um", "ah", "er", "umm", "uh", "mm", "mn", "mhm", "mnh", "<START>", "<END>"]
+re_non_silence_noises = re.compile(r"\b({})\b".format("|".join(non_silence_noises)))
 
 
-def positional_encoding(position, d_model):
-    angle_rads = get_angles(np.arange(position)[:, np.newaxis],
-                            np.arange(d_model)[np.newaxis, :],
-                            d_model)
-
-    # apply sin to even indices in the array; 2i
-    angle_rads[:, 0::2] = np.sin(angle_rads[:, 0::2])
-    # apply cos to odd indices in the array; 2i+1
-    angle_rads[:, 1::2] = np.cos(angle_rads[:, 1::2])
-    
-    pos_encoding = angle_rads[np.newaxis, ...]
-
-    return tf.cast(pos_encoding, dtype=tf.float32)
-
-
-def scaled_dot_product_attention(q, k, v, mask):
-    """Calculate the attention weights.
-    q, k, v must have matching leading dimensions.
-    k, v must have matching penultimate dimension, i.e.: seq_len_k = seq_len_v.
-    The mask has different shapes depending on its type(padding or look ahead) 
-    but it must be broadcastable for addition.
-
-    Args:
-    q: query shape == (..., seq_len_q, depth)
-    k: key shape == (..., seq_len_k, depth)
-    v: value shape == (..., seq_len_v, depth_v)
-    mask: Float tensor with shape broadcastable 
-            to (..., seq_len_q, seq_len_k). Defaults to None.
-
-    Returns:
-    output, attention_weights
+def remove_non_silence_noises(input_text):
     """
-    matmul_qk = tf.matmul(q, k, transpose_b=True)  # (..., seq_len_q, seq_len_k)
-
-    # scale matmul_qk
-    dk = tf.cast(tf.shape(k)[-1], tf.float32)
-    scaled_attention_logits = matmul_qk / tf.math.sqrt(dk)
-
-    # add the mask to the scaled tensor.
-    if mask is not None:
-        scaled_attention_logits += (mask * -1e9)  
-
-    # softmax is normalized on the last axis (seq_len_k) so that the scores
-    # add up to 1.
-    attention_weights = tf.nn.softmax(scaled_attention_logits, axis=-1)  # (..., seq_len_q, seq_len_k)
-
-    output = tf.matmul(attention_weights, v)  # (..., seq_len_q, depth_v)
-
-    return output, attention_weights
+      Removes non_silence noises from a transcript
+    """
+    return re.sub(re_non_silence_noises, '', input_text)
 
 
-class MultiHeadAttention(tf.keras.layers.Layer):
-    def __init__(self, d_model, num_heads):
-        super(MultiHeadAttention, self).__init__()
-        self.num_heads = num_heads
-        self.d_model = d_model
+def wer(ref, hyp, remove_nsns=False):
+    """
+      Calculate word error rate between two string or time_aligned_text objects
+      >>> wer("this is a cat", "this is a dog")
+      25.0
+    """
+    # remove tagged noises
+    # ref = re.sub(re_tagged_noises, ' ', ref)
+    # hyp = re.sub(re_tagged_noises, ' ', hyp)
+    ref = re.sub('^<START>|<EOS>$', '', ref)
+    hyp = re.sub('^<START>|<EOS>$', '', hyp)
 
-        assert d_model % self.num_heads == 0
+    # optionally, remove non silence noises
+    if remove_nsns:
+        ref = remove_non_silence_noises(ref)
+        hyp = remove_non_silence_noises(hyp)
 
-        self.depth = d_model // self.num_heads
+    # clean punctuation, etc.
+    # ref = clean_up(ref)
+    # hyp = clean_up(hyp)
 
-        self.wq = tf.keras.layers.Dense(d_model)
-        self.wk = tf.keras.layers.Dense(d_model)
-        self.wv = tf.keras.layers.Dense(d_model)
-
-        self.dense = tf.keras.layers.Dense(d_model)
-
-    def split_heads(self, x, batch_size):
-        """Split the last dimension into (num_heads, depth).
-        Transpose the result such that the shape is (batch_size, num_heads, seq_len, depth)
-        """
-        x = tf.reshape(x, (batch_size, -1, self.num_heads, self.depth))
-        return tf.transpose(x, perm=[0, 2, 1, 3])
-
-    def call(self, v, k, q, mask):
-        batch_size = tf.shape(q)[0]
-
-        q = self.wq(q)  # (batch_size, seq_len, d_model)
-        k = self.wk(k)  # (batch_size, seq_len, d_model)
-        v = self.wv(v)  # (batch_size, seq_len, d_model)
-
-        q = self.split_heads(q, batch_size)  # (batch_size, num_heads, seq_len_q, depth)
-        k = self.split_heads(k, batch_size)  # (batch_size, num_heads, seq_len_k, depth)
-        v = self.split_heads(v, batch_size)  # (batch_size, num_heads, seq_len_v, depth)
-
-        # scaled_attention.shape == (batch_size, num_heads, seq_len_q, depth)
-        # attention_weights.shape == (batch_size, num_heads, seq_len_q, seq_len_k)
-        scaled_attention, attention_weights = scaled_dot_product_attention(
-            q, k, v, mask)
-
-        scaled_attention = tf.transpose(scaled_attention, perm=[0, 2, 1, 3])  # (batch_size, seq_len_q, num_heads, depth)
-
-        concat_attention = tf.reshape(scaled_attention, 
-                                        (batch_size, -1, self.d_model))  # (batch_size, seq_len_q, d_model)
-
-        output = self.dense(concat_attention)  # (batch_size, seq_len_q, d_model)
-            
-        return output, attention_weights
+    # calculate WER
+    return editdistance.eval(ref.split(' '), hyp.split(' ')), len(ref.split(' '))
 
 
-def point_wise_feed_forward_network(d_model, dff):
-    return tf.keras.Sequential([
-        tf.keras.layers.Dense(dff, activation='relu'),  # (batch_size, seq_len, dff)
-        tf.keras.layers.Dense(d_model)  # (batch_size, seq_len, d_model)
-    ])
+def cer(ref, hyp, remove_nsns=False):
+    """
+      Calculate character error rate between two strings or time_aligned_text objects
+      >>> cer("this cat", "this bad")
+      25.0
+    """
+    ref = re.sub('^<START>|<EOS>$', '', ref)
+    hyp = re.sub('^<START>|<EOS>$', '', hyp)
+
+    if remove_nsns:
+        ref = remove_non_silence_noises(ref)
+        hyp = remove_non_silence_noises(hyp)
+
+    # ref = clean_up(ref)
+    # hyp = clean_up(hyp)
+
+    # calculate per line CER
+    return editdistance.eval(ref, hyp), len(ref)
 
 
-class EncoderLayer(tf.keras.layers.Layer):
-    def __init__(self, d_model, num_heads, dff, rate=0.1):
-        super(EncoderLayer, self).__init__()
+def clean_up(input_line):
+    """
+      Apply all text cleaning operations to input line
+      >>> clean_up("his license plate is a. c, f seven...five ! zero")
+      'his license plate is a c f seven five zero'
+      >>> clean_up("Q2")
+      'q two'
+      >>> clean_up("from our website at www.take2games.com.")
+      'from our website at www take two games dot com'
+      >>> clean_up("NBA 2K18")
+      'n b a two k eighteen'
+      >>> clean_up("launched WWE 2K 18")
+      'launched w w e two k eighteen'
+      >>> clean_up("released L.A. Noire, the The VR Case Files for the HTC VIVE system")
+      'released l a noire the the v r case files for the h t c v i v e system'
+      >>> clean_up("Total net bookings were $654 million,")
+      'total net bookings were six hundred and fifty four million dollars'
+      >>> clean_up("net booking which grew 6% to $380 million.")
+      'net booking which grew six percent to three hundred and eighty million dollars'
+      >>> clean_up("to $25 dollars or $0.21 per share price.")
+      'to twenty five dollars dollars or zero dollars and twenty one cents per share price'
+      >>> clean_up("year-over-year")
+      'year over year'
+      >>> clean_up("HTC VIVE")
+      'h t c v i v e'
+      >>> clean_up("you can reach me at 1-(317)-222-2222 or fax me at 555-555-5555")
+      'you can reach me at one three one seven two two two two two two two or fax me at five five five five five five five five five five'
+    """
+    for char_to_replace in ",*&!?":
+        input_line = input_line.replace(char_to_replace, ' ')
 
-        self.mha = MultiHeadAttention(d_model, num_heads)
-        self.ffn = point_wise_feed_forward_network(d_model, dff)
+    # We do not need the right below for I-Keyboard
+    # for pat in rematch:
+    #     input_line = re.sub(rematch[pat][0], rematch[pat][1], input_line)
 
-        self.layernorm1 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
-        self.layernorm2 = tf.keras.layers.LayerNormalization(epsilon=1e-6)
+    for char_to_replace in ",.-":
+        input_line = input_line.replace(char_to_replace, ' ')
 
-        self.dropout1 = tf.keras.layers.Dropout(rate)
-        self.dropout2 = tf.keras.layers.Dropout(rate)
+    input_line = input_line.encode().decode('utf-8').lower()
 
-    def call(self, x, training, mask):
-        attn_output, _ = self.mha(x, x, x, mask)  # (batch_size, input_seq_len, d_model)
-        attn_output = self.dropout1(attn_output, training=training)
-        out1 = self.layernorm1(x + attn_output)  # (batch_size, input_seq_len, d_model)
+    # check for double spacing
+    while "  " in input_line:
+        input_line = input_line.replace("  ", " ")
+    return input_line.strip()
 
-        ffn_output = self.ffn(out1)  # (batch_size, input_seq_len, d_model)
-        ffn_output = self.dropout2(ffn_output, training=training)
-        out2 = self.layernorm2(out1 + ffn_output)  # (batch_size, input_seq_len, d_model)
 
-        return out2
+def batch_error(batch_ref, batch_hyp, translator, lengths, measure):
+    total_err, total_len = 0, 0
+    for i in range(len(batch_ref)):
+        ref = translator.ids_to_string(batch_ref[i], lengths[i])
+        hyp = translator.ids_to_string(batch_hyp[i], lengths[i])
+        err, length = measure(ref, hyp)
+        total_err += err
+        total_len += length
+    return total_err, total_len
+
+
+def batch_cer(batch_ref, batch_hyp, translator, lengths):
+    return batch_error(batch_ref, batch_hyp, translator, lengths, cer)
+
+
+def batch_wer(batch_ref, batch_hyp, translator, lengths):
+    return batch_error(batch_ref, batch_hyp, translator, lengths, wer)

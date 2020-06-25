@@ -3,7 +3,7 @@ import pickle
 import os
 
 
-data_path = "../raw_data/i-keyboard/*.txt"
+data_path = "../raw_data/*.txt"
 
 
 def find_files(path): return glob.glob(path)
